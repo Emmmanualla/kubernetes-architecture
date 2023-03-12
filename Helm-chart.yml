@@ -1,0 +1,81 @@
+apiVersion: v2
+name: myapp
+description: A Helm chart for deploying My App to Amazon EKS
+version: 0.1.0
+appVersion: 1.0.0
+
+dependencies:
+  - name: mariadb
+    version: 8.4.3
+    repository: https://charts.bitnami.com/bitnami
+
+  - name: redis
+    version: 15.4.0
+    repository: https://charts.bitnami.com/bitnami
+
+  - name: nginx-ingress
+    version: 3.34.0
+    repository: https://kubernetes.github.io/ingress-nginx
+
+  - name: cert-manager
+    version: v1.5.4
+    repository: https://charts.jetstack.io
+
+  - name: myapp-worker
+    version: 0.1.0
+    repository: ./myapp-worker
+
+values:
+  replicaCount: 3
+
+  image:
+    repository: myapp/myapp
+    tag: v1
+
+  mariadb:
+    auth:
+      rootPassword: mysecretpassword
+    primary:
+      persistence:
+        enabled: true
+        size: 5Gi
+
+  redis:
+    master:
+      persistence:
+        enabled: true
+        size: 2Gi
+
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: myapp.example.com
+        paths:
+          - path: /
+    tls:
+      - secretName: myapp-tls
+        hosts:
+          - myapp.example.com
+
+  worker:
+    enabled: true
+    image:
+      repository: myapp/worker
+      tag: v1
+
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    accessMode: ReadWriteOnce
+    storageClass: gp2
+
+  secret:
+    MY_SECRET: mysecretpassword
